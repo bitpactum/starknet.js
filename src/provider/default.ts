@@ -17,15 +17,15 @@ import { BigNumberish, toBN, toHex } from '../utils/number';
 import { compressProgram, formatSignature, randomAddress } from '../utils/stark';
 import { ProviderInterface } from './interface';
 
-type NetworkName = 'mainnet-alpha' | 'georli-alpha';
+type NetworkName = 'mainnet-alpha' | 'georli-alpha' | 'devnet';
 
 type ProviderOptions =
-  | {
-      network: NetworkName;
-    }
-  | {
-      baseUrl: string;
-    };
+    | {
+  network: NetworkName;
+}
+    | {
+  baseUrl: string;
+};
 
 function wait(delay: number) {
   return new Promise((res) => setTimeout(res, delay));
@@ -38,16 +38,16 @@ export class Provider implements ProviderInterface {
 
   public gatewayUrl: string;
 
-  constructor(optionsOrProvider: ProviderOptions | Provider = { network: 'georli-alpha' }) {
+  constructor(optionsOrProvider: ProviderOptions | Provider = { network: 'devnet' }) {
     if (optionsOrProvider instanceof Provider) {
       this.baseUrl = optionsOrProvider.baseUrl;
       this.feederGatewayUrl = optionsOrProvider.feederGatewayUrl;
       this.gatewayUrl = optionsOrProvider.gatewayUrl;
     } else {
       const baseUrl =
-        'baseUrl' in optionsOrProvider
-          ? optionsOrProvider.baseUrl
-          : Provider.getNetworkFromName(optionsOrProvider.network);
+          'baseUrl' in optionsOrProvider
+              ? optionsOrProvider.baseUrl
+              : Provider.getNetworkFromName(optionsOrProvider.network);
       this.baseUrl = baseUrl;
       this.feederGatewayUrl = `${baseUrl}/feeder_gateway`;
       this.gatewayUrl = `${baseUrl}/gateway`;
@@ -59,8 +59,10 @@ export class Provider implements ProviderInterface {
       case 'mainnet-alpha':
         return 'http://alpha-mainnet.starknet.io/';
       case 'georli-alpha':
-      default:
         return 'https://alpha4.starknet.io';
+      case 'devnet':
+      default:
+        return 'http://localhost:5000';
     }
   }
 
@@ -72,7 +74,7 @@ export class Provider implements ProviderInterface {
    */
   public async getContractAddresses(): Promise<GetContractAddressesResponse> {
     const { data } = await axios.get<GetContractAddressesResponse>(
-      `${this.feederGatewayUrl}/get_contract_addresses`
+        `${this.feederGatewayUrl}/get_contract_addresses`
     );
     return data;
   }
@@ -87,16 +89,16 @@ export class Provider implements ProviderInterface {
    * @returns the result of the function on the smart contract.
    */
   public async callContract(
-    invokeTx: CallContractTransaction,
-    blockId?: number
+      invokeTx: CallContractTransaction,
+      blockId?: number
   ): Promise<CallContractResponse> {
     const { data } = await axios.post<CallContractResponse>(
-      `${this.feederGatewayUrl}/call_contract?blockId=${blockId ?? 'null'}`,
-      {
-        signature: [],
-        calldata: [],
-        ...invokeTx,
-      }
+        `${this.feederGatewayUrl}/call_contract?blockId=${blockId ?? 'null'}`,
+        {
+          signature: [],
+          calldata: [],
+          ...invokeTx,
+        }
     );
     return data;
   }
@@ -111,7 +113,7 @@ export class Provider implements ProviderInterface {
    */
   public async getBlock(blockId?: number): Promise<GetBlockResponse> {
     const { data } = await axios.get<GetBlockResponse>(
-      `${this.feederGatewayUrl}/get_block?blockId=${blockId ?? 'null'}`
+        `${this.feederGatewayUrl}/get_block?blockId=${blockId ?? 'null'}`
     );
     return data;
   }
@@ -127,9 +129,9 @@ export class Provider implements ProviderInterface {
    */
   public async getCode(contractAddress: string, blockId?: number): Promise<GetCodeResponse> {
     const { data } = await axios.get<GetCodeResponse>(
-      `${this.feederGatewayUrl}/get_code?contractAddress=${contractAddress}&blockId=${
-        blockId ?? 'null'
-      }`
+        `${this.feederGatewayUrl}/get_code?contractAddress=${contractAddress}&blockId=${
+            blockId ?? 'null'
+        }`
     );
     return data;
   }
@@ -146,14 +148,14 @@ export class Provider implements ProviderInterface {
    * @returns the value of the storage variable
    */
   public async getStorageAt(
-    contractAddress: string,
-    key: number,
-    blockId?: number
+      contractAddress: string,
+      key: number,
+      blockId?: number
   ): Promise<object> {
     const { data } = await axios.get<object>(
-      `${
-        this.feederGatewayUrl
-      }/get_storage_at?contractAddress=${contractAddress}&key=${key}&blockId=${blockId ?? 'null'}`
+        `${
+            this.feederGatewayUrl
+        }/get_storage_at?contractAddress=${contractAddress}&key=${key}&blockId=${blockId ?? 'null'}`
     );
     return data;
   }
@@ -169,7 +171,7 @@ export class Provider implements ProviderInterface {
   public async getTransactionStatus(txHash: BigNumberish): Promise<GetTransactionStatusResponse> {
     const txHashBn = toBN(txHash);
     const { data } = await axios.get<GetTransactionStatusResponse>(
-      `${this.feederGatewayUrl}/get_transaction_status?transactionHash=${toHex(txHashBn)}`
+        `${this.feederGatewayUrl}/get_transaction_status?transactionHash=${toHex(txHashBn)}`
     );
     return data;
   }
@@ -185,7 +187,7 @@ export class Provider implements ProviderInterface {
   public async getTransaction(txHash: BigNumberish): Promise<GetTransactionResponse> {
     const txHashBn = toBN(txHash);
     const { data } = await axios.get<GetTransactionResponse>(
-      `${this.feederGatewayUrl}/get_transaction?transactionHash=${toHex(txHashBn)}`
+        `${this.feederGatewayUrl}/get_transaction?transactionHash=${toHex(txHashBn)}`
     );
     return data;
   }
@@ -203,13 +205,13 @@ export class Provider implements ProviderInterface {
     const contract_address_salt = tx.type === 'DEPLOY' && toHex(toBN(tx.contract_address_salt));
 
     const { data } = await axios.post<AddTransactionResponse>(
-      `${this.gatewayUrl}/add_transaction`,
-      stringify({
-        ...tx, // the tx can contain BigInts, so we use our own `stringify`
-        ...(Array.isArray(signature) && { signature }), // not needed on deploy tx
-        ...(contract_address_salt && { contract_address_salt }), // not needed on invoke tx
-      }),
-      { headers: { 'Content-Type': 'application/json' } }
+        `${this.gatewayUrl}/add_transaction`,
+        stringify({
+          ...tx, // the tx can contain BigInts, so we use our own `stringify`
+          ...(Array.isArray(signature) && { signature }), // not needed on deploy tx
+          ...(contract_address_salt && { contract_address_salt }), // not needed on invoke tx
+        }),
+        { headers: { 'Content-Type': 'application/json' } }
     );
     return data;
   }
@@ -222,12 +224,12 @@ export class Provider implements ProviderInterface {
    * @returns a confirmation of sending a transaction on the starknet contract
    */
   public deployContract(
-    contract: CompiledContract | string,
-    constructorCalldata: string[] = [],
-    addressSalt: BigNumberish = randomAddress()
+      contract: CompiledContract | string,
+      constructorCalldata: string[] = [],
+      addressSalt: BigNumberish = randomAddress()
   ): Promise<AddTransactionResponse> {
     const parsedContract =
-      typeof contract === 'string' ? (parse(contract) as CompiledContract) : contract;
+        typeof contract === 'string' ? (parse(contract) as CompiledContract) : contract;
     const contractDefinition = {
       ...parsedContract,
       program: compressProgram(parsedContract.program),
@@ -251,10 +253,10 @@ export class Provider implements ProviderInterface {
    * @returns response from addTransaction
    */
   public invokeFunction(
-    contractAddress: string,
-    entrypointSelector: string,
-    calldata?: string[],
-    signature?: [BigNumberish, BigNumberish]
+      contractAddress: string,
+      entrypointSelector: string,
+      calldata?: string[],
+      signature?: [BigNumberish, BigNumberish]
   ): Promise<AddTransactionResponse> {
     return this.addTransaction({
       type: 'INVOKE_FUNCTION',
@@ -274,8 +276,8 @@ export class Provider implements ProviderInterface {
       const res = await this.getTransactionStatus(txHash);
 
       if (
-        res.tx_status === 'ACCEPTED_ONCHAIN' ||
-        (res.tx_status === 'PENDING' && res.block_hash !== 'pending') // This is needed as of today. In the future there will be a different status for pending transactions.
+          res.tx_status === 'ACCEPTED_ONCHAIN' ||
+          (res.tx_status === 'PENDING' && res.block_hash !== 'pending') // This is needed as of today. In the future there will be a different status for pending transactions.
       ) {
         onchain = true;
       } else if (res.tx_status === 'REJECTED') {

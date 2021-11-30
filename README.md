@@ -34,6 +34,13 @@
   </a>
 </p>
 
+## 🚀 Improvements
+Added support for devne
+
+```bash
+http://localhost:5000/
+```
+
 ## 🕹️ Usage
 
 Install starknet with `npm`
